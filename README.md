@@ -3,7 +3,7 @@
 npm and jsr proxy registry that caches responses from the original registries so
 you can get more reliable benchmarks.
 
-## Starting Server
+## Starting server
 
 ```ts
 deno run --allow-net --allow-read=. --allow-write=. jsr:@david/bench-registry/cli
