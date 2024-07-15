@@ -1,4 +1,4 @@
-import { Cache } from "./cache.ts";
+import { Cache } from "./cache/mod.ts";
 
 export interface ServerOptions {
   /** The root location of the cache. Defaults to `.bench-reg` */
@@ -9,6 +9,9 @@ export interface ServerOptions {
   npmRegistryBaseUrl?: string;
   /** Port to listen on. */
   port?: number;
+  /** Whether to put a memory cache in front of
+   * the file system cache. */
+  useMemCache?: boolean;
 }
 
 /** Starts a server with the provided options. */
@@ -22,13 +25,16 @@ export function startServer(
     opts.npmRegistryBaseUrl ?? "https://registry.npmjs.org",
   );
   const cacheRoot = opts.cacheRoot ?? ".bench-reg";
-  const cache = new Cache(cacheRoot);
+  const cache = new Cache({
+    dirPath: cacheRoot,
+    useMemCache: opts.useMemCache ?? false,
+  });
 
   return Deno.serve({
     port: opts.port,
   }, async (req) => {
     const cacheKey = await cache.createCacheKey(req.url);
-    let cached = await cache.tryRead(cacheKey);
+    let cached = await cache.get(cacheKey);
     if (cached == null) {
       const url = new URL(req.url);
       if (url.pathname.startsWith("/npm/")) {
@@ -50,7 +56,7 @@ export function startServer(
             bodyText.replaceAll("https://registry.npmjs.org/", localNpmUrl),
           );
         }
-        await cache.set(cacheKey, response.headers, body);
+        await cache.set(cacheKey, { headers: response.headers, body });
       } else if (url.pathname.startsWith("/jsr/")) {
         const newPath = url.pathname.replace("/jsr/", "");
         const newUrl = `${baseJsrRegistryUrl.origin}/${newPath}`;
@@ -60,11 +66,11 @@ export function startServer(
           return response;
         }
         const body = new Uint8Array(await response.arrayBuffer());
-        await cache.set(cacheKey, response.headers, body);
+        await cache.set(cacheKey, { headers: response.headers, body });
       } else {
         return new Response("Not found", { status: 404 });
       }
-      cached = await cache.tryRead(cacheKey);
+      cached = await cache.get(cacheKey);
       if (cached == null) {
         throw new Error("Cache should have been populated.");
       }

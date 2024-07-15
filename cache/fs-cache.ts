@@ -1,9 +1,8 @@
 import { encodeHex } from "@std/encoding/hex";
 import * as path from "@std/path";
+import type { CacheItem, CacheKey } from "./mod.ts";
 
-export type CacheKey = string & { __cacheKeyBrand: undefined };
-
-export class Cache {
+export class FsCache {
   #dirPath: string;
 
   constructor(dirPath: string) {
@@ -15,15 +14,16 @@ export class Cache {
     return path.join(this.#dirPath, await hash(url)) as CacheKey;
   }
 
-  async set(key: CacheKey, headers: Headers, body: Uint8Array) {
-    await Deno.writeFile(key, body);
+  async set(key: CacheKey, item: CacheItem) {
+    const headersObj = Object.fromEntries(item.headers);
+    await Deno.writeFile(key, item.body);
     await Deno.writeTextFile(
       key + ".headers",
-      JSON.stringify(Object.fromEntries(headers)),
+      JSON.stringify(headersObj),
     );
   }
 
-  async tryRead(key: CacheKey) {
+  async get(key: CacheKey) {
     try {
       const body = await Deno.readFile(key);
       const headers = tryParseHeaders(
@@ -32,10 +32,7 @@ export class Cache {
       if (headers == null) {
         return undefined;
       }
-      return {
-        headers,
-        body,
-      };
+      return { headers, body };
     } catch (err) {
       if (err instanceof Deno.errors.NotFound) {
         return undefined;

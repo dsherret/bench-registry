@@ -23,5 +23,5 @@ And set the `JSR_URL` env var:
 export JSR_URL=http://localhost:8000/jsr/
 ```
 
-Note: You probably want to run the server on a separate computer on your
-local network instead of using the same computer that's running the benchmark.
+Note: You probably want to run the server on a separate computer on your local
+network instead of using the same computer that's running the benchmark.
