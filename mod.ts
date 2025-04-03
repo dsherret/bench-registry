@@ -46,7 +46,9 @@ export function startServer(
       return undefined;
     }
 
-    const url = new URL(req.url);
+    // pnpm will request with %2F while npm will request %2f
+    // so standardize this
+    const url = new URL(req.url.replaceAll("%2F", "%2f"));
     if (url.pathname.startsWith("/npm/")) {
       const newPath = url.pathname.replace("/npm/", "");
       if (newPath.startsWith("-/npm/v1/security/")) {
