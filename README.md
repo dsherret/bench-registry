@@ -9,6 +9,10 @@ you can get more reliable benchmarks.
 deno run --allow-net --allow-read=. --allow-write=. jsr:@david/bench-registry/cli
 ```
 
+### Options
+
+* `--cached-only` - Run using only packages that have previously been cached.
+
 ## Setting up benchmark
 
 Use an `.npmrc` with:
