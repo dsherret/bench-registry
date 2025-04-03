@@ -12,6 +12,8 @@ export interface ServerOptions {
   /** Whether to put a memory cache in front of
    * the file system cache. */
   useMemCache?: boolean;
+  /** Whether to only cache. */
+  cachedOnly?: boolean;
 }
 
 /** Starts a server with the provided options. */
@@ -36,6 +38,9 @@ export function startServer(
     const cacheKey = await cache.createCacheKey(req.url);
     let cached = await cache.get(cacheKey);
     if (cached == null) {
+      if (opts.cachedOnly) {
+        return new Response(null, { status: 404, statusText: "Not Found." });
+      }
       const url = new URL(req.url);
       if (url.pathname.startsWith("/npm/")) {
         const newPath = url.pathname.replace("/npm/", "");
@@ -54,7 +59,7 @@ export function startServer(
           const bodyText = new TextDecoder().decode(body);
           body = new TextEncoder().encode(
             bodyText.replaceAll("https://registry.npmjs.org/", localNpmUrl),
-          );
+          ) as Uint8Array<ArrayBuffer>;
         }
         await cache.set(cacheKey, { headers: response.headers, body });
       } else if (url.pathname.startsWith("/jsr/")) {
