@@ -1,4 +1,4 @@
-import { Cache } from "./cache/mod.ts";
+import { Cache, type CacheKey } from "./cache/mod.ts";
 
 export interface ServerOptions {
   /** The root location of the cache. Defaults to `.bench-reg` */
@@ -35,51 +35,62 @@ export function startServer(
   return Deno.serve({
     port: opts.port,
   }, async (req) => {
-    const cacheKey = await cache.createCacheKey(req.url);
-    let cached = await cache.get(cacheKey);
-    if (cached == null) {
+    async function requestUrlOrUseCache(cacheKey: CacheKey) {
+      const cached = await cache.get(cacheKey);
+      if (cached != null) {
+        return new Response(cached.body, { headers: cached.headers });
+      }
       if (opts.cachedOnly) {
         return new Response(null, { status: 404, statusText: "Not Found." });
       }
-      const url = new URL(req.url);
-      if (url.pathname.startsWith("/npm/")) {
-        const newPath = url.pathname.replace("/npm/", "");
-        if (newPath.startsWith("-/npm/v1/security/")) {
-          return new Response("Not Found", { status: 404 });
-        }
-        const newUrl = `${baseNpmRegistryUrl.origin}/${newPath}`;
-        console.error("Requesting", newUrl);
-        const response = await fetch(newUrl);
-        if (response.status !== 200) {
-          return response;
-        }
-        let body = new Uint8Array(await response.arrayBuffer());
-        if (response.headers.get("Content-Type") === "application/json") {
-          const localNpmUrl = url.origin + "/npm/";
-          const bodyText = new TextDecoder().decode(body);
-          body = new TextEncoder().encode(
-            bodyText.replaceAll("https://registry.npmjs.org/", localNpmUrl),
-          ) as Uint8Array<ArrayBuffer>;
-        }
-        await cache.set(cacheKey, { headers: response.headers, body });
-      } else if (url.pathname.startsWith("/jsr/")) {
-        const newPath = url.pathname.replace("/jsr/", "");
-        const newUrl = `${baseJsrRegistryUrl.origin}/${newPath}`;
-        console.error("Requesting", newUrl);
-        const response = await fetch(newUrl);
-        if (response.status !== 200) {
-          return response;
-        }
-        const body = new Uint8Array(await response.arrayBuffer());
-        await cache.set(cacheKey, { headers: response.headers, body });
-      } else {
-        return new Response("Not found", { status: 404 });
-      }
-      cached = await cache.get(cacheKey);
-      if (cached == null) {
-        throw new Error("Cache should have been populated.");
-      }
+      return undefined;
     }
-    return new Response(cached.body, { headers: cached.headers });
+
+    const url = new URL(req.url);
+    if (url.pathname.startsWith("/npm/")) {
+      const newPath = url.pathname.replace("/npm/", "");
+      if (newPath.startsWith("-/npm/v1/security/")) {
+        return new Response("Not Found", { status: 404 });
+      }
+      const newUrl = `${baseNpmRegistryUrl.origin}/${newPath}`;
+      const cacheKey = await cache.createCacheKey(newUrl);
+      const cachedResponse = await requestUrlOrUseCache(cacheKey);
+      if (cachedResponse != null) {
+        return cachedResponse;
+      }
+      console.error("Requesting", newUrl);
+      const response = await fetch(newUrl);
+      if (response.status !== 200) {
+        return response;
+      }
+      let body = new Uint8Array(await response.arrayBuffer());
+      if (response.headers.get("Content-Type") === "application/json") {
+        const localNpmUrl = url.origin + "/npm/";
+        const bodyText = new TextDecoder().decode(body);
+        body = new TextEncoder().encode(
+          bodyText.replaceAll("https://registry.npmjs.org/", localNpmUrl),
+        ) as Uint8Array<ArrayBuffer>;
+      }
+      await cache.set(cacheKey, { headers: response.headers, body });
+      return new Response(body, { headers: response.headers });
+    } else if (url.pathname.startsWith("/jsr/")) {
+      const newPath = url.pathname.replace("/jsr/", "");
+      const newUrl = `${baseJsrRegistryUrl.origin}/${newPath}`;
+      const cacheKey = await cache.createCacheKey(newUrl);
+      const cachedResponse = await requestUrlOrUseCache(cacheKey);
+      if (cachedResponse != null) {
+        return cachedResponse;
+      }
+      console.error("Requesting", newUrl);
+      const response = await fetch(newUrl);
+      if (response.status !== 200) {
+        return response;
+      }
+      const body = new Uint8Array(await response.arrayBuffer());
+      await cache.set(cacheKey, { headers: response.headers, body });
+      return new Response(body, { headers: response.headers });
+    } else {
+      return new Response("Not found", { status: 404 });
+    }
   });
 }
