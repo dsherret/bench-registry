@@ -5,7 +5,7 @@ export type CacheKey = string & { __cacheKeyBrand: undefined };
 
 export interface CacheItem {
   headers: Readonly<Headers>;
-  body: Readonly<Uint8Array>;
+  body: Readonly<Uint8Array<ArrayBuffer>>;
 }
 
 export interface SyncCache {
@@ -37,8 +37,8 @@ export class Cache {
     this.#fsCache = new FsCache(opts.dirPath);
   }
 
-  createCacheKey(url: string) {
-    return this.#fsCache.createCacheKey(url);
+  createCacheKey(url: string, accept: string | undefined) {
+    return this.#fsCache.createCacheKey(url, accept);
   }
 
   async get(key: CacheKey) {

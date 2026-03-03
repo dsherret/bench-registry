@@ -10,8 +10,9 @@ export class FsCache {
     Deno.mkdirSync(dirPath, { recursive: true });
   }
 
-  async createCacheKey(url: string) {
-    return path.join(this.#dirPath, await hash(url)) as CacheKey;
+  async createCacheKey(url: string, accept: string | undefined) {
+    const input = accept ? `${url}\n${accept}` : url;
+    return path.join(this.#dirPath, await hash(input)) as CacheKey;
   }
 
   async set(key: CacheKey, item: CacheItem) {

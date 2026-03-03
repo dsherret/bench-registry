@@ -49,28 +49,30 @@ export function startServer(
     // pnpm will request with %2F while npm will request %2f
     // so standardize this
     const url = new URL(req.url.replaceAll("%2F", "%2f"));
+    const accept = req.headers.get("accept") ?? undefined;
     if (url.pathname.startsWith("/npm/")) {
       const newPath = url.pathname.replace("/npm/", "");
       if (newPath.startsWith("-/npm/v1/security/")) {
         return new Response("Not Found", { status: 404 });
       }
       const newUrl = `${baseNpmRegistryUrl.origin}/${newPath}`;
-      const cacheKey = await cache.createCacheKey(newUrl);
+      const cacheKey = await cache.createCacheKey(newUrl, accept);
       const cachedResponse = await requestUrlOrUseCache(cacheKey);
       if (cachedResponse != null) {
         return cachedResponse;
       }
       console.error("Requesting", newUrl);
-      const response = await fetch(newUrl);
+      const response = await fetch(newUrl, { headers: req.headers });
       if (response.status !== 200) {
         return response;
       }
       let body = new Uint8Array(await response.arrayBuffer());
-      if (response.headers.get("Content-Type") === "application/json") {
+      const contentType = response.headers.get("Content-Type") ?? "";
+      if (contentType.includes("json")) {
         const localNpmUrl = url.origin + "/npm/";
         const bodyText = new TextDecoder().decode(body);
         body = new TextEncoder().encode(
-          bodyText.replaceAll("https://registry.npmjs.org/", localNpmUrl),
+          bodyText.replaceAll(baseNpmRegistryUrl.origin + "/", localNpmUrl),
         ) as Uint8Array<ArrayBuffer>;
       }
       await cache.set(cacheKey, { headers: response.headers, body });
@@ -78,13 +80,13 @@ export function startServer(
     } else if (url.pathname.startsWith("/jsr/")) {
       const newPath = url.pathname.replace("/jsr/", "");
       const newUrl = `${baseJsrRegistryUrl.origin}/${newPath}`;
-      const cacheKey = await cache.createCacheKey(newUrl);
+      const cacheKey = await cache.createCacheKey(newUrl, accept);
       const cachedResponse = await requestUrlOrUseCache(cacheKey);
       if (cachedResponse != null) {
         return cachedResponse;
       }
       console.error("Requesting", newUrl);
-      const response = await fetch(newUrl);
+      const response = await fetch(newUrl, { headers: req.headers });
       if (response.status !== 200) {
         return response;
       }
