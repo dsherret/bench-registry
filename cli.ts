@@ -1,5 +1,6 @@
 import { startServer } from "./mod.ts";
 import { parseArgs } from "@std/cli/parse-args";
+import { join } from "@std/path/join";
 
 const args = parseArgs(Deno.args, {
   boolean: ["cached-only"],
@@ -23,7 +24,11 @@ if (subcommand === "init") {
 async function init(port: number) {
   const baseUrl = `http://localhost:${port}`;
   await writeIfNotExists(".npmrc", `registry=${baseUrl}/npm/\n`);
-  await writeIfNotExists(".env", `JSR_URL=${baseUrl}/jsr/\n`);
+  const denoDir = join(Deno.cwd(), "deno_dir");
+  await writeIfNotExists(
+    ".env",
+    `JSR_URL=${baseUrl}/jsr/\nDENO_DIR=${denoDir}\n`,
+  );
 }
 
 async function writeIfNotExists(path: string, content: string) {

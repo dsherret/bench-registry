@@ -23,11 +23,6 @@ deno run -R=. -W=. jsr:@david/bench-registry/cli init
 
 Use `--port` if the server is running on a different port.
 
-This creates:
-
-- `.npmrc` with `registry=http://localhost:8000/npm/`
-- `.env` with `JSR_URL=http://localhost:8000/jsr/`
-
 ### Manual setup
 
 Alternatively, create an `.npmrc` with:
