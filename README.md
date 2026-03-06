@@ -11,11 +11,26 @@ deno run --allow-net --allow-read=. --allow-write=. jsr:@david/bench-registry/cl
 
 ### Options
 
-* `--cached-only` - Run using only packages that have previously been cached.
+- `--cached-only` - Run using only packages that have previously been cached.
 
 ## Setting up benchmark
 
-Use an `.npmrc` with:
+Run `init` in your project directory to create `.npmrc` and `.env` files:
+
+```sh
+deno run --allow-write=. jsr:@david/bench-registry/cli init
+```
+
+Use `--port` if the server is running on a different port.
+
+This creates:
+
+- `.npmrc` with `registry=http://localhost:8000/npm/`
+- `.env` with `JSR_URL=http://localhost:8000/jsr/`
+
+### Manual setup
+
+Alternatively, create an `.npmrc` with:
 
 ```ini
 registry=http://localhost:8000/npm/
