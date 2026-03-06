@@ -1,6 +1,6 @@
 {
   "name": "@david/bench-registry",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "tasks": {
     "dev": "deno test --watch mod.ts"
   },
