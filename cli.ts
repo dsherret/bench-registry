@@ -1,4 +1,4 @@
-import { startServer } from "./mod.ts";
+import { startServer } from "./server.ts";
 import { parseArgs } from "@std/cli/parse-args";
 import { join } from "@std/path/join";
 
