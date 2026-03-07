@@ -45,7 +45,7 @@ network instead of using the same computer that's running the benchmark.
 ```ts
 import { startServer } from "jsr:@david/bench-registry/server";
 
-using server = startServer({
+await using server = startServer({
   port: 8000,
   useMemCache: true,
 });
